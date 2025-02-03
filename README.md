@@ -37,4 +37,4 @@ Lookbook is built with modern web technologies:
 Clone the repository to your local machine to get started with Lookbook:
 
 ```bash
-git clone https://github.com/your-username/lookbook.git
+git clone https://github.com/MrigyanMaharjan/lookbook.git
