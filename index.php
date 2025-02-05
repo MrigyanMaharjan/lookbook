@@ -1,3 +1,13 @@
+
+<?php
+session_start();
+if (isset($_SESSION["user_id"])) {
+    header("Location: ./pages/home.php");
+    exit();
+}
+?>
+
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -29,9 +39,10 @@
     
  
 
-<a href="#about-us"><i class="fa-solid fa-angle-down floating-btn"></i>
+<a href="#feature"><i class="fa-solid fa-angle-down floating-btn"></i>
 </a>
-    <div id="about-us" class="about-us"> This is an about us page</div>
     <div id="feature" class="feature">This is a feature page</div>
+    <?php include "./components/footer.php"?>
+
 </body>
 </html>
