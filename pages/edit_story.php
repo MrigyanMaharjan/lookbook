@@ -1,13 +1,18 @@
 <?php
 session_start();
-if (!isset($_SESSION["user_id"])) {
-    header("Location: login.php");
-    exit();
+include "../connect.php";
+if (!isset($_SESSION['user_id'])) {
+    die("Access denied. Please log in.");
 }
 
-include "../connect.php";
+if (!isset($_GET['id'])) {
+    die("Invalid request.");
+}
+
+$post_id = $_GET['id'];
 $notification = '';
 
+// Handle form submission first
 if (isset($_POST['submit'])) {
     $story_title = trim($_POST['story_title']);
     $story_genre = trim($_POST['story_genre']);
@@ -18,24 +23,39 @@ if (isset($_POST['submit'])) {
     if (!$story_title || !$story_genre || !$story) {
         $notification = "Please fill in all fields.";
     } else {
-        $stmt = $conn->prepare("INSERT INTO STORIES (user_id, story_title, story_genre, story,description, date, username) VALUES (?, ?, ?, ?,?, NOW(), ?)");
-        
+        $stmt = $conn->prepare("UPDATE stories SET story=?, story_title=?, story_genre=?,description=? WHERE id=?");
         if ($stmt) {
-            $stmt->bind_param("isssss", $_SESSION['user_id'], $story_title, $story_genre, $story,$description, $_SESSION['username']);
+            $stmt->bind_param("ssssi", $story, $story_title, $story_genre,$description, $post_id);
             $stmt->execute();
             
             if ($stmt->affected_rows > 0) {
                 header("Location: ./home.php");
                 exit();
             } else {
-                $notification = "Failed to publish story. Please try again.";
+                $notification = "No changes made or update failed.";
             }
             $stmt->close();
         } else {
             $notification = "Database error: " . $conn->error;
         }
     }
-    $conn->close();
+}
+
+// Fetch existing story data
+$stmt = $conn->prepare("SELECT user_id, story_title, story_genre,description, story FROM stories WHERE id = ?");
+$stmt->bind_param("i", $post_id);
+$stmt->execute();
+$result = $stmt->get_result();
+
+if ($result->num_rows !== 1) {
+    die("Post not found.");
+}
+
+$row = $result->fetch_assoc();
+$actual_author = $row['user_id'];
+
+if ($_SESSION['user_id'] !== $actual_author) {
+    die("You do not have permission to access this post.");
 }
 ?>
 <!DOCTYPE html>
@@ -43,7 +63,7 @@ if (isset($_POST['submit'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Create Your Story</title>
+    <title>Edit Story</title>
     <style>
     :root {
         --primary-color: #D6CCC2;
@@ -222,17 +242,19 @@ if (isset($_POST['submit'])) {
     }
     </style>
     <script src="https://cdn.ckeditor.com/4.16.2/standard/ckeditor.js"></script>
+    <?php include "../components/previousbt.php"?>
 </head>
 <body>
     <?php if (!empty($notification)): ?>
+        
     <div class="notification"><?= $notification ?></div>
     <?php endif; ?>
-        <?php include "../components/previousbt.php"?>
+
     <div class="story-container">
         <form method="POST" class="story-form">
             <div class="form-header">
-                <h1 class="form-title">Create Your Story</h1>
-                <p class="form-subtitle">Share your creative writing with the world</p>
+                <h1 class="form-title">Edit Your Story</h1>
+                <p class="form-subtitle">Revise and improve your creative work</p>
             </div>
 
             <div class="form-group">
@@ -244,6 +266,7 @@ if (isset($_POST['submit'])) {
                     class="form-control" 
                     type="text" 
                     name="story_title"
+                    value="<?= htmlspecialchars($row['story_title']) ?>"
                 >
             </div>
             <div class="form-group">
@@ -255,75 +278,66 @@ if (isset($_POST['submit'])) {
                     class="form-control" 
                     type="text" 
                     name="description"
+                    value="<?= htmlspecialchars($row['description']) ?>"
                 >
             </div>
             
             <div class="form-group">
                 <label class="form-label" for="story-genre">Genre</label>
                 <select class="form-control form-select" id="story-genre" required name="story_genre">
-                    <option value="" disabled selected>Choose a genre for your story</option>
-                    <option value="adventure">Adventure</option>
-                    <option value="comedy">Comedy</option>
-                    <option value="crime">Crime</option>
-                    <option value="drama">Drama</option>
-                    <option value="fantasy">Fantasy</option>
-                    <option value="historical">Historical</option>
-                    <option value="horror">Horror</option>
-                    <option value="mystery">Mystery</option>
-                    <option value="mythology">Mythology</option>
-                    <option value="romance">Romance</option>
-                    <option value="sci-fi">Science Fiction</option>
-                    <option value="thriller">Thriller</option>
-                    <option value="tragedy">Tragedy</option>
-                    <option value="western">Western</option>
+                    <?php
+                    $genres = [
+                        'adventure', 'comedy', 'crime', 'drama', 'fantasy',
+                        'historical', 'horror', 'mystery', 'mythology',
+                        'romance', 'sci-fi', 'thriller', 'tragedy', 'western'
+                    ];
+                    
+                    foreach ($genres as $genre) {
+                        $selected = $row['story_genre'] === $genre ? 'selected' : '';
+                        echo "<option value='$genre' $selected>" . ucfirst($genre) . "</option>";
+                    }
+                    ?>
                 </select>
             </div>
 
             <div class="form-group">
                 <label class="form-label" for="editor">Your Story</label>
                 <div class="editor-container">
-                    <textarea name="story" id="editor"></textarea>
+                    <textarea name="story" id="editor"><?= htmlspecialchars($row['story']) ?></textarea>
                 </div>
             </div>
 
             <div class="form-actions">
                 <a href="./home.php" class="btn btn-secondary">Cancel</a>
-                <button type="submit" class="btn btn-primary" name="submit">Publish Story</button>
+                <button type="submit" class="btn btn-primary" name="submit">Update Story</button>
             </div>
         </form>
     </div>
 
     <script>
-    CKEDITOR.replace('editor', {
-        height: 400,
-        toolbar: [
-            ['Bold', 'Italic', 'Underline', 'Strike'],
-            ['NumberedList', 'BulletedList'],
-            ['Link', 'Image'],
-            ['Undo', 'Redo']
-        ],
-        removePlugins: 'elementspath,resize,about',
-        contentsCss: [
-            'body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial; font-size: 16px; color: #575757; }'
-        ]
-    });
-
-    CKEDITOR.on('dialogDefinition', function(ev) {
-        if (ev.data.name === 'image') {
-            var dialog = ev.data.definition;
-            dialog.minWidth = 400;
-            
-            dialog.removeContents('advanced');
-            dialog.removeContents('upload');
-            
-            var infoTab = dialog.getContents('info');
-            infoTab.remove('txtAlt');
-            infoTab.remove('txtWidth');
-            infoTab.remove('txtHeight');
-            infoTab.remove('txtBorder');
-            infoTab.remove('ratioLock');
-        }
-    });
-</script>
+        CKEDITOR.replace('editor', {
+            height: 400,
+            removeButtons: 'About',
+            toolbarGroups: [
+                { name: 'document', groups: [ 'mode', 'document', 'doctools' ] },
+                { name: 'clipboard', groups: [ 'clipboard', 'undo' ] },
+                { name: 'editing', groups: [ 'find', 'selection', 'spellchecker', 'editing' ] },
+                { name: 'forms', groups: [ 'forms' ] },
+                '/',
+                { name: 'basicstyles', groups: [ 'basicstyles', 'cleanup' ] },
+                { name: 'paragraph', groups: [ 'list', 'indent', 'blocks', 'align', 'bidi', 'paragraph' ] },
+                { name: 'links', groups: [ 'links' ] },
+                { name: 'insert', groups: [ 'insert' ] },
+                '/',
+                { name: 'styles', groups: [ 'styles' ] },
+                { name: 'colors', groups: [ 'colors' ] },
+                { name: 'tools', groups: [ 'tools' ] },
+            ],
+            removePlugins: 'elementspath,resize',
+            contentsCss: [
+                'body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial; font-size: 16px; color: #575757; }',
+            ]
+        });
+    </script>
 </body>
 </html>

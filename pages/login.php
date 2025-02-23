@@ -40,10 +40,12 @@ $conn->close();
     <link rel="stylesheet" href="../style.css">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login</title>
+    <title style="font-weight:bold;">Login</title>
 </head>
 <div class="container">
+<?php include "../components/previousbt.php"?>
     <form class="login-form" method="post">
+      
         <section>LOG IN</section>
         Username:<input class="input-form" placeholder="Enter your name username"name="username" placeholder="Enter your username" type="text" required>
         Password:<input class="input-form" placeholder="Enter your name password"name="password" placeholder="Enter your password" type="password" required>

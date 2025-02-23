@@ -31,12 +31,12 @@ if (isset($_SESSION["user_id"])) {
         <a href="./pages/login.php" class="share-btn">Start Writing <i class="fa-solid fa-arrow-right"></i></a>
     </div>
 
-    </section>
+
     <section>
         <img  class="img" src="./assets/8e5cf638-0e15-4ca5-820a-d4286896957d.png" alt="">
     </section>
     </div>
-    
+    </section>
  
 
 <a href="#feature"><i class="fa-solid fa-angle-down floating-btn"></i>

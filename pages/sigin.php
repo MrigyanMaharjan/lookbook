@@ -41,6 +41,7 @@ $conn->close();
 </head>
 
 <div class="container">
+    <?php include "../components/previousbt.php"?>
     <form class="login-form" method="post">
         <section>SIGN UP</section>
         <section style="display:flex ;">
